@@ -1,0 +1,32 @@
+/node_modules
+/dist
+/build
+/testReports/
+/tests_output/
+/application.properties
+/logging.json
+/build-info.properties
+chromedriver.log
+
+## Intellij project files ##
+*.iml
+*.ipr
+*.iws
+.idea/
+
+## Ignore VS Code generated files (JLS files) ##
+.project
+.settings
+.classpath
+.vscode
+.history
+bin
+
+## Misc ##
+.DS_Store
+
+geckodriver.log
+
+coverage/
+
+*.log
