@@ -1,0 +1,13 @@
+steps:
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    args:
+      - gcloud
+      - functions
+      - deploy
+      - sendKudos
+      - --region=europe-west1
+      - --source=.
+      - --trigger-http
+      - --runtime=nodejs14
+      - --set-env-vars
+      - SLACK_URL=https://lycorpworkspace.slack.com,KUDOS_CHANNEL_ID=C017MRGM26L,SEND_KUDOS_SUMMARY_TO_CHANNEL_ID=C016H59DJ2K
