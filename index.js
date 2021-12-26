@@ -1,8 +1,13 @@
 const { App, ExpressReceiver } = require('@slack/bolt');
 const { set, parse } = require ('date-fns');
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
+const secretManagerServiceClient = new SecretManagerServiceClient();
 
-const TOKEN = process.env.SLACK_TOKEN;
-const SIGNING_SECRET = process.env.SLACK_SIGNING_SECRET;
+const slackTokenSecretName = 'projects/931385241634/secrets/kudos-slack-token/versions/latest';
+const slackSigningSecretName = 'projects/931385241634/secrets/kudos-slack-signing-secret/versions/latest';
+
+let slackToken;
+let slackSigningSecret;
 const BASE_SLACK_URL = process.env.SLACK_URL;
 const KUDOS_CHANNEL_ID = process.env.KUDOS_CHANNEL_ID;
 const SEND_KUDOS_SUMMARY_TO_CHANNEL_ID = process.env.SEND_KUDOS_SUMMARY_TO_CHANNEL_ID;
@@ -22,7 +27,7 @@ const excludeMessages = (message) =>
     botFilter(message) &&
     includeRegex(message) &&
     messageFilter(message) &&
-    shortMessage(message);    
+    shortMessage(message);
 
 const messageFromDate = (date) => {
     const newDate = parse(date, 'yyyy-MM-dd', new Date());
@@ -36,14 +41,40 @@ const messageToDate = (date) => {
     return set(newDate, endOfDay);
 };
 
-const validateSlackConfigurationPresent = () => {
-    if (!SIGNING_SECRET) {
+
+const getSigningSecret = async () => {
+    console.log('I am retreiving the signing secret');
+    const [version] = await secretManagerServiceClient.accessSecretVersion({
+        name: slackSigningSecretName,
+    });
+
+    return version.payload.data.toString();
+};
+
+const getToken = async () => {
+    console.log('I am retreiving the token secret');
+    const [version] = await secretManagerServiceClient.accessSecretVersion({
+        name: slackTokenSecretName,
+    });
+
+    return version.payload.data.toString();
+};
+
+const validateSlackConfigurationPresent = async () => {
+    slackSigningSecret = await getSigningSecret();
+    slackToken = await getToken();
+
+    if (!slackSigningSecret) {
         throw new Error('Signing secret not present - add SLACK_SIGNING_SECRET enviroment variable');
     }
 
-    if (!TOKEN) {
+    console.log(`Slack Signing secret starts with ${slackSigningSecret.substring(0, 5)}`);
+
+    if (!slackToken) {
         throw new Error('SLACK_TOKEN enviroment variable not present');
     }
+
+    console.log(`Slack token starts with ${slackToken.substring(0, 5)}`);
 
     if (!BASE_SLACK_URL) {
         throw new Error('SLACK_URL enviroment variable not present');
@@ -200,7 +231,7 @@ const retrieveMessages = async (
     latestDate
 ) => {
     const result = await app.client.conversations.history({
-        token: TOKEN,
+        token: slackToken,
         channel,
         oldest: dateToSeconds(oldestDate),
         latest: dateToSeconds(latestDate),
@@ -217,7 +248,7 @@ const sendMessage = async (
 ) => {
     try {
         await app.client.chat.postMessage({
-            token: TOKEN,
+            token: slackToken,
             channel: channel,
             blocks: messageBlock,
             text: 'Yo yo yo, we got some kudos messages!'
@@ -245,7 +276,7 @@ const fetchKudosMessagesWithDate = async (
         fromDate,
         toDate
     );
-    
+
     const thankYouMessages = retrievedMessages
         .filter(excludeMessages)
         .map((message) => {
@@ -341,34 +372,37 @@ const SENDkudosSummary = async (
     to,
     dryRun
 ) => {
-    try {
-        validateSlackConfigurationPresent();
+    await validateSlackConfigurationPresent();
 
-        const receiver = new ExpressReceiver({
-            signingSecret: SIGNING_SECRET,
-        });
-        console.log('from', from);
-        console.log('to', to);
-        const app = new App({
-            token: TOKEN,
-            signingSecret: SIGNING_SECRET,
-            receiver,
-        });
+    const receiver = new ExpressReceiver({
+        signingSecret: slackSigningSecret,
+    });
 
-        const kudosMessages = await fetchKudosMessagesWithDate(
-            app,
-            KUDOS_CHANNEL_ID,
-            from,
-            to
-        );
-        console.log(`Got ${kudosMessages.length} thank you messages`);
-    
-        if (kudosMessages.length) {
-            await sendKudosMessages(app, kudosMessages, channel, dryRun);
-        }
-    } catch (e) {
-        console.error('Could not send kudos message', e);
+    const app = new App({
+        token: slackToken,
+        signingSecret: slackSigningSecret,
+        receiver,
+    });
+
+    const kudosMessages = await fetchKudosMessagesWithDate(
+        app,
+        KUDOS_CHANNEL_ID,
+        from,
+        to
+    );
+    console.log(`Got ${kudosMessages.length} thank you messages`);
+
+    if (kudosMessages.length) {
+        await sendKudosMessages(app, kudosMessages, channel, dryRun);
     }
 };
 
-SENDkudosSummary(SEND_KUDOS_SUMMARY_TO_CHANNEL_ID, messageFromDate('2021-08-08'), messageToDate('2021-08-08'), false);
+exports.sendKudos = (req, res) => {
+    try {
+        SENDkudosSummary(SEND_KUDOS_SUMMARY_TO_CHANNEL_ID, messageFromDate('2021-08-08'), messageToDate('2021-08-08'), false);
+        res.send(`Kudos sent ${process.env.KUDOS_CHANNEL_ID}!`);
+    } catch (e) {
+        console.error('Could not send kudos message', e);
+        res.send(`Could not send kudos ${e}`);
+    }
+};

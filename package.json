@@ -2,16 +2,14 @@
   "name": "kudos-bot",
   "version": "1.0.0",
   "description": "",
-  "main": "src/server/index.ts",
+  "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
+    "@google-cloud/secret-manager": "^3.9.0",
     "@slack/bolt": "^3.0.0",
     "date-fns": "^2.16.0"
-  },
-  "devDependencies": {
-    "@slack/types": "^2.0.0"
   },
   "author": "",
   "license": "MIT"
