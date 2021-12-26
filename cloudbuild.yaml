@@ -4,7 +4,7 @@ steps:
       - gcloud
       - functions
       - deploy
-      - sendKudos
+      - sendKudosTest
       - --region=europe-west1
       - --source=.
       - --trigger-http
