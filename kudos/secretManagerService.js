@@ -14,11 +14,11 @@ const getSigningSecret = async () => {
         name: slackSigningSecretName,
     });
 
+    const signingSecretPayload = version.payload.data.toString();
+
     if (!signingSecretPayload) {
         throw new Error('Signing secret not present - add SLACK_SIGNING_SECRET enviroment variable');
     }
-
-    const signingSecretPayload = version.payload.data.toString();
     return signingSecretPayload;
 };
 
