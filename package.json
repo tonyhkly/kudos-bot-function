@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node dev-index.js"
   },
   "dependencies": {
     "@google-cloud/secret-manager": "^3.9.0",

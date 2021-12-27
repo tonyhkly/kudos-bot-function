@@ -1,4 +1,4 @@
-const {sendKudosSummary} = require('./sendKudos');
+const {sendKudosSummary} = require("./sendKudos");
 const {parse, set} = require("date-fns");
 
 const messageFromDate = (date) => {
@@ -13,16 +13,19 @@ const messageToDate = (date) => {
     return set(newDate, endOfDay);
 };
 
-exports.sendKudos = (req, res) => {
+const myfunction = async () => {
+    process.env.NODE_ENV = 'development';
+
     try {
         const fromDate = messageFromDate('2021-08-08');
         const toDate = messageToDate('2021-08-08')
 
         sendKudosSummary(fromDate, toDate);
 
-        res.send(`Kudos sent ${process.env.KUDOS_CHANNEL_ID}!`);
+        console.log(`Kudos sent ${process.env.KUDOS_CHANNEL_ID}!`);
     } catch (e) {
         console.error('Could not send kudos message', e);
-        res.send(`Could not send kudos ${e}`);
     }
-};
+}
+
+myfunction();
