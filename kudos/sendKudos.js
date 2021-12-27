@@ -1,4 +1,6 @@
 const { App, ExpressReceiver } = require('@slack/bolt');
+const messageFilter  = require('./messageFilter');
+const getRandomEmojis  = require('./getRandomEmojis');
 
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const secretManagerServiceClient = new SecretManagerServiceClient();
@@ -11,23 +13,6 @@ let slackSigningSecret;
 const BASE_SLACK_URL = process.env.SLACK_URL;
 const KUDOS_CHANNEL_ID = process.env.KUDOS_CHANNEL_ID;
 const SEND_KUDOS_SUMMARY_TO_CHANNEL_ID = process.env.SEND_KUDOS_SUMMARY_TO_CHANNEL_ID;
-
-const botFilter = (message) => !message.bot_id;
-const includeRegex = (message) =>
-    !!message.text.match(
-        /(thank|kudo|cheers|congratulat|hats off|shout out|shoutout|big up|merci|gracias)/i
-    );
-const excludeRegex = /(be open to receiving|It would be great if one|No kudos necessary|Just to clarify|for starting this channel|pretty darn impressive|KudosBot has also decided|Currently KudosBot sends the Kudos summary|kudos_bot|Kudos bot is becoming|sassiness module|creating a poll but I have two questions|set the channel description|set the channel topic|Since last Friday we've had 14 kudos messages|How does it work|just start using the channel|in tandem with the existing feedback|Kudosbot is on github)/i;
-const messageFilter = (message) => !message.text.match(excludeRegex);
-const excludeEmojisAndUsersRegex = /(:[^:]*:)|(<[^<]*>)/g;
-const shortMessage = (message) =>
-    message.text.replace(excludeEmojisAndUsersRegex, '').length > 30;
-
-const excludeMessages = (message) =>
-    botFilter(message) &&
-    includeRegex(message) &&
-    messageFilter(message) &&
-    shortMessage(message);
 
 const getSigningSecret = async () => {
     if (process.env.NODE_ENV === 'development') {
@@ -82,124 +67,6 @@ const validateSlackConfigurationPresent = async () => {
     if (!SEND_KUDOS_SUMMARY_TO_CHANNEL_ID) {
         throw new Error('SEND_KUDOS_SUMMARY_TO_CHANNEL_ID environement variable not present');
     }
-};
-
-const emojiList = [
-    ':face_with_cowboy_hat:',
-    ':muscle:',
-    ':sunglasses:',
-    ':heart_eyes:',
-    ':unicorn_face:',
-    ':female_genie:',
-    ':monkey_face:',
-    ':hugging_face:',
-    ':kissing_heart:',
-    ':nerd_face:',
-    ':panda_face:',
-    ':man_dancing:',
-    ':dancer:',
-    ':partyface:',
-    ':catdance:',
-    ':heart:',
-    ':male_mage:',
-    ':mage:',
-    ':zany_face:',
-    ':blush:',
-    ':innocent:',
-    ':ghost:',
-    ':male-singer:',
-    ':man-gesturing-ok:',
-    ':ok_woman:',
-    ':female-singer:',
-    ':mermaid:',
-    ':merman:',
-    ':smirk_cat:',
-    ':star-struck:',
-    ':charmander_dancing:',
-    ':love:',
-    ':parrot:',
-    ':hammer_time:',
-    ':open_mouth:',
-    ':man-tipping-hand:',
-    ':woman-tipping-hand:',
-    ':kissing_cat:',
-    ':the_horns:',
-    ':spock-hand: ',
-    ':punch:',
-    ':relaxed:',
-    ':meow_popcorn:',
-    ':meow_coffee:',
-    ':meow_party:',
-    ':blush-gif:',
-    ':dabbing:',
-    ':daenery:',
-    ':nightking:',
-    ':arya:',
-    ':tyrionl:',
-    ':t-rex:',
-    ':johnsnow:',
-    ':bran-the-broken:',
-    ':cersei:',
-    ':jaimel:',
-    ':greyworm:',
-    ':perfect:',
-    ':heart-eyes:',
-    ':bongo_blob:',
-    ':blob-yes:',
-    ':blob_excited:',
-    ':blob-sunglasses:',
-    ':snap-point:',
-    ':agree:',
-    ':drop-the-mic:',
-    ':pikachu_wave:',
-    ':poke_pika_wink:',
-    ':poke-pika-angry:',
-    ':attitude-monkey:',
-    ':love-monkey:',
-    ':monkey_dance:',
-    ':attitude-monkey:',
-    ':bigsmile:',
-    ':emo:',
-    ':fb-like:',
-    ':aggretsuko_paperwork:',
-    ':pig-happy-jumping:',
-    ':danceydoge:',
-    ':stuck_out_tongue_winking_eye:',
-    ':smirk:',
-    ':laughing:',
-    ':relieved:',
-    ':male-cook:',
-    ':female-cook:',
-    ':bruce:',
-    ':cookie_monster:',
-    ':batman:',
-    ':one-sec-cooking:',
-    ':kids:',
-    ':fox_face:',
-    ':lion_face:',
-    ':tiger:',
-    ':male-technologist:',
-    ':female-technologist:',
-    ':female_elf:',
-    ':elf:',
-];
-
-const getRandomEmojis = (numberRequested) => {
-    const randomEmojis = [];
-    const emojis = emojiList;
-
-    while (numberRequested !== randomEmojis.length) {
-        if (emojis.length === 0) {
-            randomEmojis.forEach((emoji) => {
-                emojis.push(emoji);
-            });
-        }
-        const randomIndex = Math.floor(Math.random() * emojis.length);
-        randomEmojis.push(emojis[randomIndex]);
-        emojis.splice(randomIndex, 1);
-    }
-
-    return randomEmojis;
 };
 
 const generateLongMessage = (
@@ -274,7 +141,7 @@ const fetchKudosMessagesWithDate = async (
     );
 
     const thankYouMessages = retrievedMessages
-        .filter(excludeMessages)
+        .filter(messageFilter)
         .map((message) => {
             const originalText = message.text;
             const text =
