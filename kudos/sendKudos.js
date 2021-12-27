@@ -1,61 +1,15 @@
 const { App, ExpressReceiver } = require('@slack/bolt');
 const messageFilter  = require('./messageFilter');
 const getRandomEmojis  = require('./getRandomEmojis');
+const { getToken, getSigningSecret } = require('./secretManagerService');
 
-const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
-const secretManagerServiceClient = new SecretManagerServiceClient();
-
-const slackTokenSecretName = 'projects/931385241634/secrets/kudos-slack-token/versions/latest';
-const slackSigningSecretName = 'projects/931385241634/secrets/kudos-slack-signing-secret/versions/latest';
-
-let slackToken;
-let slackSigningSecret;
 const BASE_SLACK_URL = process.env.SLACK_URL;
 const KUDOS_CHANNEL_ID = process.env.KUDOS_CHANNEL_ID;
 const SEND_KUDOS_SUMMARY_TO_CHANNEL_ID = process.env.SEND_KUDOS_SUMMARY_TO_CHANNEL_ID;
 
-const getSigningSecret = async () => {
-    if (process.env.NODE_ENV === 'development') {
-        return Promise.resolve(process.env.SLACK_SIGNING_SECRET);
-    }
-
-    console.log('I am retreiving the signing secret');
-    const [version] = await secretManagerServiceClient.accessSecretVersion({
-        name: slackSigningSecretName,
-    });
-
-    return version.payload.data.toString();
-};
-
-const getToken = async () => {
-    if (process.env.NODE_ENV === 'development') {
-        return Promise.resolve(process.env.SLACK_TOKEN);
-    }
-
-    console.log('I am retreiving the token secret');
-    const [version] = await secretManagerServiceClient.accessSecretVersion({
-        name: slackTokenSecretName,
-    });
-
-    return version.payload.data.toString();
-};
+let slackToken;
 
 const validateSlackConfigurationPresent = async () => {
-    slackSigningSecret = await getSigningSecret();
-    slackToken = await getToken();
-
-    if (!slackSigningSecret) {
-        throw new Error('Signing secret not present - add SLACK_SIGNING_SECRET enviroment variable');
-    }
-
-    console.log(`Slack Signing secret starts with ${slackSigningSecret.substring(0, 5)}`);
-
-    if (!slackToken) {
-        throw new Error('SLACK_TOKEN enviroment variable not present');
-    }
-
-    console.log(`Slack token starts with ${slackToken.substring(0, 5)}`);
-
     if (!BASE_SLACK_URL) {
         throw new Error('SLACK_URL enviroment variable not present');
     }
@@ -227,6 +181,8 @@ exports.sendKudosSummary = async (
     toDate
 ) => {
     await validateSlackConfigurationPresent();
+    const slackSigningSecret = await getSigningSecret();
+    slackToken = await getToken();
 
     const receiver = new ExpressReceiver({
         signingSecret: slackSigningSecret,
