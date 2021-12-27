@@ -1,4 +1,4 @@
-const {sendKudosSummary} = require("./sendKudos");
+const {sendKudosSummary} = require("./kudos/sendKudos");
 const {parse, set} = require("date-fns");
 
 const messageFromDate = (date) => {
@@ -13,7 +13,7 @@ const messageToDate = (date) => {
     return set(newDate, endOfDay);
 };
 
-const myfunction = async () => {
+const sendKudosDev = async () => {
     process.env.NODE_ENV = 'development';
 
     try {
@@ -28,4 +28,4 @@ const myfunction = async () => {
     }
 }
 
-myfunction();
+sendKudosDev();

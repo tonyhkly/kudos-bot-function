@@ -1,4 +1,4 @@
-const {sendKudosSummary} = require('./sendKudos');
+const {sendKudosSummary} = require('./kudos/sendKudos');
 const {parse, set} = require("date-fns");
 
 const messageFromDate = (date) => {
