@@ -33,7 +33,7 @@ const sendMessage = async (
             token: slackToken,
             channel: channel,
             blocks: messageBlock,
-            text: 'Yo yo yo, we got some kudos messages!'
+            text: 'You\'ve been mentioned in a kudos message!'
         });
     } catch (error) {
         console.error(error);

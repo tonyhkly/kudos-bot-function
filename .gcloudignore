@@ -17,3 +17,5 @@ node_modules
 #!include:.gitignore
 
 README.md
+
+dev-index.js
